@@ -19,7 +19,9 @@ import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import android.util.Base64  //追加する
+import android.view.View
 import android.widget.ListView
+import kotlinx.android.synthetic.main.activity_question_detail.*
 
 
 class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelectedListener {
@@ -36,6 +38,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private var mGenreRef: DatabaseReference? = null
 
     private val mEventListener = object : ChildEventListener {
+
         override fun onChildAdded(dataSnapshot: DataSnapshot, s: String?) {
             val map = dataSnapshot.value as Map<String, String>
             val title = map["title"] ?: ""
@@ -65,7 +68,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
             val question = Question(title, body, name, uid, dataSnapshot.key ?: "",
                 mGenre, bytes, answerArrayList)
-            mQuestionArrayList.add(question)
+               mQuestionArrayList.add(question)
             mAdapter.notifyDataSetChanged()
         }
 
@@ -147,7 +150,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         navigationView.setNavigationItemSelectedListener(this)
 
         // Firebase
-        mDatabaseReference = FirebaseDatabase.getInstance().reference
+        mDatabaseReference = (this.application as QAApp).getDatabaseRef()
 
         // ListViewの準備
         mListView = findViewById(R.id.listView)
@@ -169,7 +172,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
 
         // 1:趣味を既定の選択とする
         if(mGenre == 0) {
-            onNavigationItemSelected(navigationView.menu.getItem(0))
+            onNavigationItemSelected(navigationView.menu.findItem(R.id.nav_hobby))
+        }
+        if(FirebaseAuth.getInstance().currentUser == null){
+            navigationView.menu.findItem(R.id.nav_favorite).setVisible(false)
+        }else{
+            navigationView.menu.findItem(R.id.nav_favorite).setVisible(true)
         }
     }
 
@@ -206,6 +214,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         } else if (id == R.id.nav_compter) {
             mToolbar.title = "コンピューター"
             mGenre = 4
+        }else if(id == R.id.nav_favorite){
+            mToolbar.title = "お気に入り"
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
@@ -221,6 +231,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (mGenreRef != null) {
             mGenreRef!!.removeEventListener(mEventListener)
         }
+
+
         mGenreRef = mDatabaseReference.child(ContentsPATH).child(mGenre.toString())
         mGenreRef!!.addChildEventListener(mEventListener)
         // --- ここまで追加する ---

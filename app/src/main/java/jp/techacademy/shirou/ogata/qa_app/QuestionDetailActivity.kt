@@ -6,14 +6,11 @@ import android.support.design.widget.FloatingActionButton
 import android.support.v7.app.AppCompatActivity
 import android.view.View
 import android.widget.ListView
+import android.widget.Button
 
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
-import com.google.firebase.database.ChildEventListener
-import com.google.firebase.database.DataSnapshot
-import com.google.firebase.database.DatabaseError
-import com.google.firebase.database.DatabaseReference
-import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.*
 import kotlinx.android.synthetic.main.activity_question_detail.*
 
 import java.util.HashMap
@@ -63,6 +60,22 @@ class QuestionDetailActivity : AppCompatActivity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        if(FirebaseAuth.getInstance().currentUser == null){
+            fab2.hide()
+        }else{
+            fab2.show()
+            var mFavoriteHashMap = (this.application as QAApp).mFavoriteHashMap
+            if (mFavoriteHashMap.containsKey(mQuestion.questionUid)) {
+                fab2.setImageResource(R.drawable.ic_star_yellow_24dp)
+            } else {
+                fab2.setImageResource(R.drawable.ic_star_black_24dp)
+            }
+        }
+
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_question_detail)
@@ -96,8 +109,29 @@ class QuestionDetailActivity : AppCompatActivity() {
             }
         }
 
+        fab2.setOnClickListener {
+            val user = FirebaseAuth.getInstance().currentUser
+            if (user != null) {
+                var mFavoriteHashMap = (this.application as QAApp).mFavoriteHashMap
+                var mFavoriteRef = (this.application as QAApp).getFavoriteRef()
+
+                if (mFavoriteHashMap.containsKey(mQuestion.questionUid)) {
+                    mFavoriteRef!!.child(mQuestion.questionUid).removeValue()
+                    fab2.setImageResource(R.drawable.ic_star_black_24dp)
+                } else {
+                    mFavoriteRef!!.child(mQuestion.questionUid).setValue(1)
+                    fab2.setImageResource(R.drawable.ic_star_yellow_24dp)
+                }
+            }
+        }
+
+
+
+
         val dataBaseReference = FirebaseDatabase.getInstance().reference
         mAnswerRef = dataBaseReference.child(ContentsPATH).child(mQuestion.genre.toString()).child(mQuestion.questionUid).child(AnswersPATH)
         mAnswerRef.addChildEventListener(mEventListener)
     }
+
+
 }
