@@ -13,11 +13,13 @@ import kotlinx.android.synthetic.main.activity_setting.*
 class SettingActivity : AppCompatActivity() {
 
     private lateinit var mDataBaseReference: DatabaseReference
+    private lateinit var mQAApp:QAApp
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_setting)
 
+        mQAApp = this.application as QAApp
         // Preferenceから表示名を取得してEditTextに反映させる
         val sp = PreferenceManager.getDefaultSharedPreferences(this)
         val name = sp.getString(NameKEY, "")
@@ -61,6 +63,7 @@ class SettingActivity : AppCompatActivity() {
             FirebaseAuth.getInstance().signOut()
             nameText.setText("")
             Snackbar.make(v, "ログアウトしました", Snackbar.LENGTH_LONG).show()
+            mQAApp!!.resetFavoriteList()
         }
     }
 }

@@ -26,6 +26,7 @@ class LoginActivity : AppCompatActivity() {
     private lateinit var mCreateAccountListener: OnCompleteListener<AuthResult>
     private lateinit var mLoginListener: OnCompleteListener<AuthResult>
     private lateinit var mDataBaseReference: DatabaseReference
+    private lateinit var mQAApp:QAApp
 
     // アカウント作成時にフラグを立て、ログイン処理後に名前をFirebaseに保存する
     private var mIsCreateAccount = false
@@ -34,6 +35,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
+        mQAApp = this.application as QAApp
         mDataBaseReference = FirebaseDatabase.getInstance().reference
 
         // FirebaseAuthのオブジェクトを取得する
@@ -86,7 +88,8 @@ class LoginActivity : AppCompatActivity() {
                         override fun onCancelled(firebaseError: DatabaseError) {}
                     })
                 }
-
+                //ログインしなおした場合お気に入りをリセットする
+                mQAApp!!.resumeFavoriteList()
                 // プログレスバーを非表示にする
                 progressBar.visibility = View.GONE
 

@@ -186,8 +186,9 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         val navigationView = findViewById<NavigationView>(R.id.nav_view)
 
         // 1:趣味を既定の選択とする
-        if(mGenre == 0) {
+        if(mGenre == 0 || FirebaseAuth.getInstance().currentUser == null) {
             onNavigationItemSelected(navigationView.menu.findItem(R.id.nav_hobby))
+            navigationView.menu.findItem(R.id.nav_hobby).setChecked(true)
         }else{
             reloadList()
         }
@@ -250,18 +251,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         if (id == R.id.nav_hobby) {
             mToolbar.title = "趣味"
             mGenre = 1
+            fab.show()
         } else if (id == R.id.nav_life) {
             mToolbar.title = "生活"
             mGenre = 2
+            fab.show()
         } else if (id == R.id.nav_health) {
             mToolbar.title = "健康"
             mGenre = 3
+            fab.show()
         } else if (id == R.id.nav_compter) {
             mToolbar.title = "コンピューター"
             mGenre = 4
+            fab.show()
         }else if(id == R.id.nav_favorite){
             mToolbar.title = "お気に入り"
             mGenre = 100
+            fab.hide()
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)

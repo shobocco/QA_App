@@ -58,6 +58,19 @@ class QAApp: Application() {
         return mFavoriteRef
     }
 
+    fun resumeFavoriteList(){
+        resetFavoriteList()
+        updateFavoriteList()
+    }
+
+    fun resetFavoriteList(){
+        if(mFavoriteRef != null){
+            mFavoriteRef!!.removeEventListener(mEventListener)
+            mFavoriteRef = null
+            mFavoriteHashMap.clear()
+        }
+    }
+
     fun updateFavoriteList(){
         val user = FirebaseAuth.getInstance().uid
         if(user != null){
