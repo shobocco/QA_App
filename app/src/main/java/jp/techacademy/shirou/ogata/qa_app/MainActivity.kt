@@ -19,6 +19,7 @@ import com.google.firebase.database.ChildEventListener
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import android.util.Base64  //追加する
+import android.util.Log
 import android.view.View
 import android.widget.ListView
 import kotlinx.android.synthetic.main.activity_question_detail.*
@@ -35,11 +36,23 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
     private lateinit var mQuestionArrayList: ArrayList<Question>
     private lateinit var mAdapter: QuestionsListAdapter
 
-    private var mGenreRef: DatabaseReference? = null
+    private var mGenreRefArrayList = ArrayList<DatabaseReference>()
+    private lateinit var mFavoriteHashMap: HashMap<String,Boolean>
+
 
     private val mEventListener = object : ChildEventListener {
 
         override fun onChildAdded(dataSnapshot: DataSnapshot, s: String?) {
+
+            val parentKey = dataSnapshot.ref.parent!!.key
+            if(parentKey != null) {
+                Log.d("QAChild_log", "onChildAdded:" + parentKey.toString())
+            }
+
+            if(mGenre == 100 && !mFavoriteHashMap!!.containsKey(dataSnapshot.key)){
+                return
+            }
+
             val map = dataSnapshot.value as Map<String, String>
             val title = map["title"] ?: ""
             val body = map["body"] ?: ""
@@ -67,7 +80,7 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             }
 
             val question = Question(title, body, name, uid, dataSnapshot.key ?: "",
-                mGenre, bytes, answerArrayList)
+                parentKey!!.toInt(), bytes, answerArrayList)
                mQuestionArrayList.add(question)
             mAdapter.notifyDataSetChanged()
         }
@@ -117,26 +130,28 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         mToolbar = findViewById(R.id.toolbar)
         setSupportActionBar(mToolbar)
 
+        mFavoriteHashMap = (this.application as QAApp).mFavoriteHashMap
+
         val fab = findViewById<FloatingActionButton>(R.id.fab)
         fab.setOnClickListener { view ->
             // ジャンルを選択していない場合（mGenre == 0）はエラーを表示するだけ
-            if (mGenre == 0) {
+            if (mGenre == 0 || mGenre == 100) {
                 Snackbar.make(view, "ジャンルを選択して下さい", Snackbar.LENGTH_LONG).show()
             } else {
 
-            }
-            // ログイン済みのユーザーを取得する
-            val user = FirebaseAuth.getInstance().currentUser
+                // ログイン済みのユーザーを取得する
+                val user = FirebaseAuth.getInstance().currentUser
 
-            if (user == null) {
-                // ログインしていなければログイン画面に遷移させる
-                val intent = Intent(applicationContext, LoginActivity::class.java)
-                startActivity(intent)
-            } else {
-                // ジャンルを渡して質問作成画面を起動する
-                val intent = Intent(applicationContext, QuestionSendActivity::class.java)
-                intent.putExtra("genre", mGenre)
-                startActivity(intent)
+                if (user == null) {
+                    // ログインしていなければログイン画面に遷移させる
+                    val intent = Intent(applicationContext, LoginActivity::class.java)
+                    startActivity(intent)
+                } else {
+                    // ジャンルを渡して質問作成画面を起動する
+                    val intent = Intent(applicationContext, QuestionSendActivity::class.java)
+                    intent.putExtra("genre", mGenre)
+                    startActivity(intent)
+                }
             }
         }
 
@@ -173,6 +188,8 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         // 1:趣味を既定の選択とする
         if(mGenre == 0) {
             onNavigationItemSelected(navigationView.menu.findItem(R.id.nav_hobby))
+        }else{
+            reloadList()
         }
         if(FirebaseAuth.getInstance().currentUser == null){
             navigationView.menu.findItem(R.id.nav_favorite).setVisible(false)
@@ -199,6 +216,34 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
         return super.onOptionsItemSelected(item)
     }
 
+    fun reloadList(){
+        // --- ここから ---
+        // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
+        mQuestionArrayList.clear()
+        mAdapter.setQuestionArrayList(mQuestionArrayList)
+        mListView.adapter = mAdapter
+
+        // 選択したジャンルにリスナーを登録する
+        mGenreRefArrayList.forEach{
+            it!!.removeEventListener(mEventListener)
+        }
+
+        if(mGenre != 100) {
+            var mGenreRef: DatabaseReference =
+                mDatabaseReference.child(ContentsPATH).child(mGenre.toString())
+            mGenreRef!!.addChildEventListener(mEventListener)
+            mGenreRefArrayList.add(mGenreRef)
+        }else{
+            for(i in 1..4){
+                var mGenreRef: DatabaseReference =
+                    mDatabaseReference.child(ContentsPATH).child(i.toString())
+                mGenreRef!!.addChildEventListener(mEventListener)
+                mGenreRefArrayList.add(mGenreRef)
+            }
+        }
+
+    }
+
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         val id = item.itemId
 
@@ -216,27 +261,12 @@ class MainActivity : AppCompatActivity(), NavigationView.OnNavigationItemSelecte
             mGenre = 4
         }else if(id == R.id.nav_favorite){
             mToolbar.title = "お気に入り"
+            mGenre = 100
         }
 
         val drawer = findViewById<DrawerLayout>(R.id.drawer_layout)
         drawer.closeDrawer(GravityCompat.START)
-
-        // --- ここから ---
-        // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
-        mQuestionArrayList.clear()
-        mAdapter.setQuestionArrayList(mQuestionArrayList)
-        mListView.adapter = mAdapter
-
-        // 選択したジャンルにリスナーを登録する
-        if (mGenreRef != null) {
-            mGenreRef!!.removeEventListener(mEventListener)
-        }
-
-
-        mGenreRef = mDatabaseReference.child(ContentsPATH).child(mGenre.toString())
-        mGenreRef!!.addChildEventListener(mEventListener)
-        // --- ここまで追加する ---
-
+        reloadList()
         return true
     }
 }
